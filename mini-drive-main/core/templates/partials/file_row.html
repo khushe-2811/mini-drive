@@ -1,0 +1,90 @@
+<tbody id="file-{{ file.id }}" data-processed="{{ file.processed|lower }}">
+    <tr>
+        <td>
+            <div class="d-flex align-items-center">
+                {% if file.thumb %}
+                <div class="me-3"><img src="{{ file.thumb.url }}" alt="Thumbnail"
+                        style="width: 36px; height: 36px; object-fit: cover;"></div>
+                {% elif file.processed %}
+                {% if 'pdf' in file.mime_type %}
+                <i class="bi bi-file-pdf-fill text-danger me-3" style="font-size: 1.5rem;"></i>
+                {% elif 'image' in file.mime_type %}
+                <i class="bi bi-file-image-fill text-success me-3" style="font-size: 1.5rem;"></i>
+                {% elif 'text' in file.mime_type %}
+                <i class="bi bi-file-text-fill text-primary me-3" style="font-size: 1.5rem;"></i>
+                {% else %}
+                <i class="bi bi-file-earmark-fill text-secondary me-3" style="font-size: 1.5rem;"></i>
+                {% endif %}
+                {% else %}
+                <div class="spinner-border text-primary me-3" role="status"
+                    style="width: 1.5rem; height: 1.5rem;">
+                    <span class="visually-hidden">Processing...</span>
+                </div>
+                {% endif %}
+                <span class="text-truncate">{{ file.name }}</span>
+            </div>
+        </td>
+        <td>{{ file.mime_type|default:"Unknown" }}</td>
+        <td>{{ file.size|filesizeformat }}</td>
+        <td>{{ file.uploaded|date:"M d, Y" }}</td>
+        <td>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'download_file' file.id %}">
+                            <i class="bi bi-download me-2"></i> Download
+                        </a>
+                    </li>
+                    <li>
+                        <form method="post" action="{% url 'create_share' file.id %}" class="d-inline"
+                            hx-post="{% url 'create_share' file.id %}" hx-target="#file-{{ file.id }}"
+                            hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">
+                                <i class="bi bi-share me-2"></i> Share
+                            </button>
+                        </form>
+                    </li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <form method="post" action="{% url 'delete_file' file.id %}" class="d-inline"
+                            hx-post="{% url 'delete_file' file.id %}" hx-target="#file-{{ file.id }}"
+                            hx-swap="outerHTML"
+                            hx-confirm="Are you sure you want to delete '{{ file.name }}'? This cannot be undone.">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="bi bi-trash me-2"></i> Delete
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </td>
+    </tr>
+
+    <!-- Share tokens display -->
+    {% for token in file.sharetoken_set.all %}
+    {% if token.is_valid %}
+    <tr class="table-light">
+        <td colspan="5">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-link-45deg text-success me-2"></i>
+                <div class="text-truncate">
+                    <a href="{% url 'serve_share' token.uuid %}" target="_blank" class="text-success">
+                        {{ request.scheme }}://{{ request.get_host }}{% url 'serve_share' token.uuid %}
+                    </a>
+                </div>
+                <div class="ms-auto text-muted small">
+                    Expires: {{ token.expiry|date:"M d, Y H:i" }}
+                </div>
+            </div>
+        </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+</tbody>

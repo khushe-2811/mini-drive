@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: minidrive
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn minidrive.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: RENDER
+        value: "true"

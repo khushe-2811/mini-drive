@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign in to MiniDrive{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="text-center mb-4">
+            <h1 class="h3 fw-normal mb-3">
+                <span style="color: #4285F4;">Mini</span><span style="color: #5f6368;">Drive</span>
+            </h1>
+            <h2 class="h5 fw-normal text-muted">Sign in</h2>
+            <p class="text-muted small">to continue to MiniDrive</p>
+        </div>
+
+        <div class="card shadow-sm border rounded-3">
+            <div class="card-body p-4">
+                <form method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        Your username and password didn't match. Please try again.
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <label for="id_username" class="form-label">Username</label>
+                        <input type="text" name="username" id="id_username" class="form-control form-control-lg"
+                            required autofocus placeholder="Enter your username">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="id_password" class="form-label">Password</label>
+                        <input type="password" name="password" id="id_password" class="form-control form-control-lg"
+                            required placeholder="Enter your password">
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">Sign in</button>
+                    </div>
+
+                    <input type="hidden" name="next" value="{{ next }}">
+                </form>
+            </div>
+        </div>
+
+        <div class="mt-4 text-center">
+            <p class="text-muted small">
+                Don't have an account? <a href="{% url 'register' %}" class="text-decoration-none">Create one now</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

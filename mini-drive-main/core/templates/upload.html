@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload to MiniDrive{% endblock %}
+
+{% block content %}
+{% if folder %}
+<!-- Breadcrumb navigation if in a folder -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">My Drive</a></li>
+        {% for crumb in breadcrumbs %}
+        {% if forloop.last %}
+        <li class="breadcrumb-item active" aria-current="page">{{ crumb.name }}</li>
+        {% else %}
+        <li class="breadcrumb-item"><a href="{% url 'folder_detail' crumb.id %}" class="text-decoration-none">{{ crumb.name }}</a></li>
+        {% endif %}
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h2 class="h5 mb-0">
+                    {% if folder %}
+                    Upload Files to {{ folder.name }}
+                    {% else %}
+                    Upload Files to My Drive
+                    {% endif %}
+                </h2>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data" id="upload-form" hx-encoding="multipart/form-data"
+                    hx-post="{{ request.path }}" hx-target="#upload-feedback" hx-indicator="#progress-container">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field in form %}
+                        {% for error in field.errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if folder %}
+                    <input type="hidden" name="folder" value="{{ folder.id }}">
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <div
+                            class="upload-area border rounded-3 p-5 text-center bg-light position-relative overflow-hidden">
+                            <input type="file" name="{{ form.file.name }}" id="{{ form.file.id_for_label }}"
+                                class="position-absolute top-0 end-0 bottom-0 start-0 opacity-0"
+                                style="cursor: pointer; z-index: 10;" required>
+                            <div class="upload-content">
+                                <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 3rem;"></i>
+                                <h3 class="h5 mt-3">Drag files here or click to upload</h3>
+                                <p class="text-muted small mb-0">Maximum file size: 100MB</p>
+                            </div>
+                        </div>
+                        {% if form.file.help_text %}
+                        <small class="form-text text-muted mt-2">{{ form.file.help_text }}</small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Hidden at first, shown by HTMX during upload -->
+                    <div id="progress-container" class="mb-4 d-none">
+                        <label class="form-label text-muted small">Uploading...</label>
+                        <div class="progress" role="progressbar" style="height: 6px;">
+                            <div id="upload-progress"
+                                class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div id="upload-feedback"></div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <a href="{% if folder %}{% url 'folder_detail' folder.id %}{% else %}{% url 'dashboard' %}{% endif %}"
+                            class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            Upload
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Track upload progress with HTMX or fallback to standard form
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('{{ form.file.id_for_label }}');
+        const progressBar = document.getElementById('upload-progress');
+        const progressContainer = document.getElementById('progress-container');
+        const uploadArea = document.querySelector('.upload-area');
+
+        // Visual feedback when file is selected
+        fileInput.addEventListener('change', function () {
+            if (this.files.length > 0) {
+                uploadArea.classList.add('border-primary');
+                const fileName = this.files[0].name;
+                const fileSize = (this.files[0].size / (1024 * 1024)).toFixed(2) + ' MB';
+
+                const uploadContent = document.querySelector('.upload-content');
+                uploadContent.innerHTML = `
+                    <i class="bi bi-file-earmark-check text-primary" style="font-size: 2rem;"></i>
+                    <h3 class="h6 mt-2 mb-0">${fileName}</h3>
+                    <p class="text-muted small">${fileSize}</p>
+                `;
+            }
+        });
+
+        // Handle drag and drop visual effects
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, function (e) {
+                e.preventDefault();
+                uploadArea.classList.add('border-primary', 'bg-light');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, function (e) {
+                e.preventDefault();
+                if (eventName === 'drop') {
+                    fileInput.files = e.dataTransfer.files;
+                    const event = new Event('change');
+                    fileInput.dispatchEvent(event);
+                } else {
+                    if (!fileInput.files.length) {
+                        uploadArea.classList.remove('border-primary', 'bg-light');
+                    }
+                }
+            }, false);
+        });
+
+        // Check if browser supports HTMX features
+        if (window.htmx) {
+            // Handle file upload with progress
+            htmx.on('#upload-form', 'htmx:xhr:progress', function (evt) {
+                if (evt.loaded && evt.total) {
+                    const percent = Math.round((evt.loaded / evt.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressBar.setAttribute('aria-valuenow', percent);
+
+                    if (progressContainer.classList.contains('d-none')) {
+                        progressContainer.classList.remove('d-none');
+                    }
+                }
+            });
+
+            // Handle success response
+            htmx.on('#upload-form', 'htmx:afterOnLoad', function (evt) {
+                if (evt.detail.xhr.status === 200 && evt.detail.xhr.responseText.includes('success')) {
+                    // Redirect to dashboard after successful upload
+                    window.location.href = '{% if folder %}{% url "folder_detail" folder.id %}{% else %}{% url "dashboard" %}{% endif %}';
+                }
+            });
+        } else {
+            // Disable HTMX if not supported
+            form.removeAttribute('hx-post');
+            form.removeAttribute('hx-target');
+            form.removeAttribute('hx-encoding');
+            form.removeAttribute('hx-indicator');
+        }
+    });
+</script>
+{% endblock %}

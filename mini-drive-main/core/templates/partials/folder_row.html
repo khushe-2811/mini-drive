@@ -1,0 +1,66 @@
+<tbody id="folder-{{ folder.id }}">
+    <tr>
+        <td>
+            <a href="{% url 'folder_detail' folder.id %}"
+                class="d-flex align-items-center text-decoration-none text-reset">
+                <i class="bi bi-folder-fill text-warning me-3" style="font-size: 1.5rem;"></i>
+                <span class="text-truncate">{{ folder.name }}</span>
+            </a>
+        </td>
+        <td>{{ folder.created|date:"M d, Y" }}</td>
+        <td>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <form method="post" action="{% url 'create_folder_share' folder.id %}"
+                            class="d-inline" hx-post="{% url 'create_folder_share' folder.id %}"
+                            hx-target="#folder-{{ folder.id }}" hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">
+                                <i class="bi bi-share me-2"></i> Share
+                            </button>
+                        </form>
+                    </li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <form method="post" action="{% url 'delete_folder' folder.id %}" class="d-inline"
+                            hx-post="{% url 'delete_folder' folder.id %}"
+                            hx-target="#folder-{{ folder.id }}" hx-swap="outerHTML"
+                            hx-confirm="Are you sure you want to delete folder '{{ folder.name }}' and ALL its contents? This cannot be undone.">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="bi bi-trash me-2"></i> Delete
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </td>
+    </tr>
+    <!-- Share tokens display -->
+    {% for token in folder.foldersharetoken_set.all %}
+    {% if token.is_valid %}
+    <tr class="table-light">
+        <td colspan="3">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-link-45deg text-success me-2"></i>
+                <div class="text-truncate">
+                    <a href="{% url 'serve_folder_share' token.uuid %}" target="_blank"
+                        class="text-success">
+                        {{ request.scheme }}://{{ request.get_host }}{% url 'serve_folder_share' token.uuid %}
+                    </a>
+                </div>
+                <div class="ms-auto text-muted small">
+                    Expires: {{ token.expiry|date:"M d, Y H:i" }}
+                </div>
+            </div>
+        </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+</tbody>

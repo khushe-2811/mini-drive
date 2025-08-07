@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Shared Folder: {{ folder.name }} - Mini-Drive Lite{% endblock %}
+
+{% block content %}
+<div class="alert alert-info mb-4">
+    <i class="bi bi-share me-2"></i> You are viewing a shared folder. This link will expire on {{token.expiry}}
+</div>
+
+{% if breadcrumbs %}
+<!-- Breadcrumb navigation -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        {% for crumb in breadcrumbs %}
+        {% if forloop.last %}
+        <li class="breadcrumb-item active" aria-current="page">{{ crumb.name }}</li>
+        {% else %}
+        <li class="breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.name }}</a></li>
+        {% endif %}
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}
+
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h1>{{ folder.name }}</h1>
+        <p class="text-muted">Shared by {{ folder.owner.username }}</p>
+    </div>
+</div>
+
+{% if folders or files %}
+{% if folders %}
+<h2 class="h5 mb-3">Folders</h2>
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 mb-4">
+    {% for folder in folders %}
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-folder text-warning me-2" style="font-size: 2rem;"></i>
+                    <h5 class="card-title mb-0">{{ folder.name }}</h5>
+                </div>
+                <p class="card-text text-muted small">
+                    Created: {{ folder.created|date:"M d, Y" }}
+                </p>
+                <a href="{% url 'serve_folder_share' token.uuid %}?subfolder={{ folder.id }}"
+                    class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if files %}
+<h2 class="h5 mb-3">Files</h2>
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for file in files %}
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title text-truncate mb-0" title="{{ file.name }}">{{ file.name }}</h5>
+            </div>
+            <div class="thumbnail">
+                {% if file.thumb %}
+                <img src="{{ file.thumb.url }}" alt="Thumbnail" class="img-fluid">
+                {% elif file.processed %}
+                {% if 'pdf' in file.mime_type %}
+                <i class="bi bi-file-pdf text-danger"></i>
+                {% elif 'image' in file.mime_type %}
+                <i class="bi bi-file-image text-success"></i>
+                {% elif 'text' in file.mime_type %}
+                <i class="bi bi-file-text text-primary"></i>
+                {% else %}
+                <i class="bi bi-file-earmark"></i>
+                {% endif %}
+                {% else %}
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Processing...</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <p class="card-text mb-1 small text-muted">
+                    Size: {{ file.size|filesizeformat }}
+                </p>
+                <p class="card-text small text-muted">
+                    Uploaded: {{ file.uploaded|date:"M d, Y H:i" }}
+                </p>
+                <a href="{% url 'serve_shared_file' token.uuid file.id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-download me-1"></i> Download
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle me-2"></i> This shared folder is empty.
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,9 @@
+Django>=5.0,<6
+djangorestframework>=3.15
+python-dotenv>=1.0
+pillow
+pymupdf
+numpy
+openai>=1.14
+celery==5.3
+django-htmx==1.23.0
